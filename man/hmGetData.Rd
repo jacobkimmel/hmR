@@ -9,12 +9,12 @@ hmGetData(hm, scalar = "data", cat = c("clust"))
 \arguments{
 \item{hm}{: `heteromtility` data object.}
 
-\item{scalar}{: string. property for numerical data to be retrieved. {'data', 'raw.data', 'pcs', etc}}
+\item{scalar}{: character. property for numerical data to be retrieved. {'data', 'raw.data', 'pcs', etc}}
 
-\item{cat}{: iterable of strings. categorical features to retrieve from `meta.data`}
+\item{cat}{: iterable of strings. categorical features to retrieve from `@meta.data`}
 }
 \value{
-df : data.frame. contains data in `scalar` and retrieved `meta.data`
+df : data.frame. contains data in `scalar` and retrieved `@meta.data`
 }
 \description{
 Gets data from a `heteromotility` object and returns a data.frame

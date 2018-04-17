@@ -10,17 +10,17 @@ hmHClust(hm, k = 2, linkage = "ward.D2", dist_method = "euclidean",
 \arguments{
 \item{hm}{: `heteromtility` data object.}
 
-\item{k}{: integer. number of clusters to set with `cutree`.}
+\item{k}{: integer. number of clusters to set with `cutree()`.}
 
-\item{linkage}{: character. method for hierarchical clustering, compatible with `hclust`.}
+\item{linkage}{: character. method for hierarchical clustering, compatible with `hclust()`.}
 
-\item{dist_method}{: character. method for distance matrix calculation, compatible with `dist`.}
+\item{dist_method}{: character. method for distance matrix calculation, compatible with `dist()`.}
 
-\item{scalar}{: character. scalar data space to use. {'data', 'unscaled.data', 'pcs'}.}
+\item{scalar}{: character. scalar data space to use. ['data', 'unscaled.data', 'pcs'].}
 }
 \value{
 hm : `heteromtility` data object.
-  adds 'clust' variable to `hm@meta.data`
+  adds `clust` variable to `@meta.data`
 }
 \description{
 Performs hierarchical clustering and sets `meta.data$clust` in `hm`

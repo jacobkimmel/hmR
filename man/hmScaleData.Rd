@@ -14,5 +14,5 @@ hm : `heteromtility` data object.
   assigns @data.
 }
 \description{
-Scales and centers `raw.data` in a heteromotility object `hm`
+Uses `scale()` to set `mean = 0` and `std = 1` for each feature in `@unscaled.data`
 }

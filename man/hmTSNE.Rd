@@ -13,7 +13,7 @@ hmTSNE(hm, perplexity = 50)
 }
 \value{
 hm : `heteromtility` data object.
-  assigns `hm@tsne`
+  assigns `@tsne`
 }
 \description{
 Performs tSNE on `pcs` in `hm`

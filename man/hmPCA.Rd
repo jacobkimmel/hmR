@@ -2,8 +2,7 @@
 % Please edit documentation in R/hm_data.R
 \name{hmPCA}
 \alias{hmPCA}
-\title{Performs PCA on `data` in a heteromotility object `hm`
-adds PCs to `pcs` and loadings to `pc_loadings`}
+\title{Performs PCA on `data` in a heteromotility object `hm`}
 \usage{
 hmPCA(hm, max_pcs = 30)
 }
@@ -14,9 +13,8 @@ hmPCA(hm, max_pcs = 30)
 }
 \value{
 hm : `heteromtility` data object.
-  assigns @pcs
+  assigns `@pcs`
 }
 \description{
 Performs PCA on `data` in a heteromotility object `hm`
-adds PCs to `pcs` and loadings to `pc_loadings`
 }

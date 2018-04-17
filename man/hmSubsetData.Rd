@@ -2,7 +2,7 @@
 % Please edit documentation in R/hm_data.R
 \name{hmSubsetData}
 \alias{hmSubsetData}
-\title{Subsets data in heteromotility object `hm`}
+\title{Retrives a subset of cell data in heteromotility object `hm`}
 \usage{
 hmSubsetData(hm, cell_index = F, cat = F, id = F)
 }
@@ -19,5 +19,6 @@ hmSubsetData(hm, cell_index = F, cat = F, id = F)
 hm : `heteromtility` data object.
 }
 \description{
-Subsets data in heteromotility object `hm`
+Useful for selecting only cells of a certain type or class.
+`cat` and `id` parameters must be supplied together.
 }

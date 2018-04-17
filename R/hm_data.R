@@ -37,6 +37,8 @@ hmMakeObject <- function(raw.data, meta.data.list = list()){
 
 #' Scales and centers `raw.data` in a heteromotility object `hm`
 #'
+#' Uses `scale()` to set `mean = 0` and `std = 1` for each feature in `@unscaled.data`
+#'
 #' @param hm : `heteromtility` data object.
 #'
 #' @return hm : `heteromtility` data object.
@@ -51,10 +53,10 @@ hmScaleData <- function(hm){
 #' Gets data from a `heteromotility` object and returns a data.frame
 #'
 #' @param hm : `heteromtility` data object.
-#' @param scalar : string. property for numerical data to be retrieved. {'data', 'raw.data', 'pcs', etc}
-#' @param cat : iterable of strings. categorical features to retrieve from `meta.data`
+#' @param scalar : character. property for numerical data to be retrieved. {'data', 'raw.data', 'pcs', etc}
+#' @param cat : iterable of strings. categorical features to retrieve from `@meta.data`
 #'
-#' @return df : data.frame. contains data in `scalar` and retrieved `meta.data`
+#' @return df : data.frame. contains data in `scalar` and retrieved `@meta.data`
 #'
 hmGetData <- function(hm, scalar='data', cat=c('clust')){
 
@@ -67,7 +69,10 @@ hmGetData <- function(hm, scalar='data', cat=c('clust')){
   return(df)
 }
 
-#' Subsets data in heteromotility object `hm`
+#' Retrives a subset of cell data in heteromotility object `hm`
+#'
+#' Useful for selecting only cells of a certain type or class.
+#' `cat` and `id` parameters must be supplied together.
 #'
 #' @param hm : `heteromtility` data object.
 #' @param cell_index : boolean or numerical index of rows in @data to keep.
@@ -106,13 +111,12 @@ hmSubsetData <- function(hm, cell_index=F, cat=F, id=F){
 }
 
 #' Performs PCA on `data` in a heteromotility object `hm`
-#' adds PCs to `pcs` and loadings to `pc_loadings`
 #'
 #' @param hm : `heteromtility` data object.
 #' @param max_pcs : integer. number of principle components to keep.
 #'
 #' @return hm : `heteromtility` data object.
-#'   assigns @pcs
+#'   assigns `@pcs`
 #'
 hmPCA <- function(hm, max_pcs=30){
   pca = prcomp(hm@data)
@@ -124,13 +128,13 @@ hmPCA <- function(hm, max_pcs=30){
 #' Performs hierarchical clustering and sets `meta.data$clust` in `hm`
 #'
 #' @param hm : `heteromtility` data object.
-#' @param k : integer. number of clusters to set with `cutree`.
-#' @param linkage : character. method for hierarchical clustering, compatible with `hclust`.
-#' @param dist_method : character. method for distance matrix calculation, compatible with `dist`.
-#' @param scalar : character. scalar data space to use. {'data', 'unscaled.data', 'pcs'}.
+#' @param k : integer. number of clusters to set with `cutree()`.
+#' @param linkage : character. method for hierarchical clustering, compatible with `hclust()`.
+#' @param dist_method : character. method for distance matrix calculation, compatible with `dist()`.
+#' @param scalar : character. scalar data space to use. ['data', 'unscaled.data', 'pcs'].
 #'
 #' @return hm : `heteromtility` data object.
-#'   adds 'clust' variable to `hm@meta.data`
+#'   adds `clust` variable to `@meta.data`
 #'
 hmHClust <- function(hm, k=2, linkage='ward.D2', dist_method='euclidean', scalar='data'){
   dm = dist(attr(hm, scalar), method=dist_method)
@@ -147,7 +151,7 @@ hmHClust <- function(hm, k=2, linkage='ward.D2', dist_method='euclidean', scalar
 #' @param perplexity : integer. perplexity parameter for `Rtsne`.
 #'
 #' @return hm : `heteromtility` data object.
-#'   assigns `hm@tsne`
+#'   assigns `@tsne`
 #'
 hmTSNE <- function(hm, perplexity=50){
   require(Rtsne)
