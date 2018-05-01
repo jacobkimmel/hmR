@@ -179,6 +179,32 @@ hmPlotFeatureMeans <- function(hm, class='clust', limited=F, sig_bars=F, width=8
   return(p_mean)
 }
 
+#' Plots a heatmap of Heteromotility feature values
+#'
+#' @param hm : `heteromotility` object with scaled data.
+#' @param scalar : character. scalar data space to use. ['data', 'unscaled.data', 'pcs'].
+#' @param plot_path : character. path to save heatmap.
+#' @param prefix : character. prefix to append to heatmap file names.
+#' @param height : float. height of plot in inches.
+#' @param width : float. width of plot in inches.
+#' @param ... : all other arguments accepted by `pheatmap()`
+#'
+#' @exports Saves a heatmap as PREFIXheatmap.png.
+#'
+hmPlotHeatmap <- function(hm, scalar='data', plot_path=NULL, prefix='', height=7, width=7, ...){
+  if (scalar == 'data'){
+    mat = hm@data
+  } else if (scalar == 'unscaled.data'){
+    mat = hm@unscaled.data
+  } else if (scalar == 'pcs'){
+    mat = hm@pcs
+  } else {
+    stop('`scalar` must be in (data, unscaled.data, pcs)')
+  }
+
+  png(paste(plot_path, prefix, 'heatmap.png', sep=''), width=width, height=height, res=600, units='in')
+}
+
 #' Plots monocle pseudotiming
 #'
 #' @param hm : `heteromotility` object containing @celldataset trajectory data.

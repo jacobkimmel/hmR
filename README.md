@@ -10,12 +10,6 @@ require(devtools)
 install_github('jacobkimmel/hmR')
 ```
 
-**Note:** Pseudotiming functions in `hmR` require [`monocle`](http://cole-trapnell-lab.github.io/monocle-release/), but it is not installed by default due to the heavy nature of this dependency. If you'd like to use pseudotiming functions, run
-
-```
-install_github("cole-trapnell-lab/monocle-release@develop")
-```
-
 ## Usage
 
 `hmR` semantics focus on a `heteromotility` data set object, initialized from raw cell behavior feature data extracted using [`heteromotility`](https://github.com/cellgeometry/heteromotility).
