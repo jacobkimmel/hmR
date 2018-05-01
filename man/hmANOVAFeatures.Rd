@@ -4,14 +4,16 @@
 \alias{hmANOVAFeatures}
 \title{Performs ANOVAs for each feature in `hm@unscaled.data` between groups defined by `cat`.}
 \usage{
-hmANOVAFeatures(hm, cat = "clust", plot_path = F)
+hmANOVAFeatures(hm, cat = "clust", plot_path = F, prefix = "")
 }
 \arguments{
 \item{hm}{: `heteromtility` data object.}
 
 \item{cat}{: character. specifies column name in `hm@meta.data` to use for group definition.}
 
-\item{plot_path}{: character, optional. path to a directory to save individual t-test summary reports.}
+\item{plot_path}{: character, optional. path to a directory to save individual test summary reports.}
+
+\item{prefix}{: character, optional. prefix to filenames of individual tests saved in `plot_path`.}
 }
 \value{
 hm : `heteromtility` data object.

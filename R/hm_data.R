@@ -10,7 +10,7 @@ heteromotility <- methods::setClass(
             pcs = 'matrix', # principal components
             tsne = 'matrix', # tsne embedding
             dist.matrix = 'matrix', # distance matrix
-            celldataset = 'CellDataSet') # monocle CellDataSet
+            celldataset = 'ANY') # monocle CellDataSet
 )
 
 #' Build a `heteromotility` data object from a data.frame
@@ -217,18 +217,19 @@ hmTTestFeatures <- function(hm, cat='age', plot_path=F){
 #'
 #' @param hm : `heteromtility` data object.
 #' @param cat : character. specifies column name in `hm@meta.data` to use for group definition.
-#' @param plot_path : character, optional. path to a directory to save individual t-test summary reports.
+#' @param plot_path : character, optional. path to a directory to save individual test summary reports.
+#' @param prefix : character, optional. prefix to filenames of individual tests saved in `plot_path`.
 #'
 #' @return hm : `heteromtility` data object.
 #'
-hmANOVAFeatures <- function(hm, cat='clust', plot_path=F){
+hmANOVAFeatures <- function(hm, cat='clust', plot_path=F, prefix=''){
 
   classes = levels(hm@meta.data[,cat])
 
   anova_results = data.frame(matrix(ncol=3, nrow=ncol(hm@unscaled.data)))
   for (i in 1:ncol(hm@unscaled.data)){
     feature_name <- rownames(hm@feat.data)[i]
-    p <- anova_feature(hm@unscaled.data, hm@meta.data[,cat], feature_name, plot_path = plot_path)
+    p <- anova_feature(hm@unscaled.data, hm@meta.data[,cat], feature_name, plot_path = plot_path, prefix=prefix)
     anova_results[i,] <- c(feature_name, p, 0)
   }
   colnames(anova_results) <- c('Feature_Name', 'p_value', 'adj_p_value')

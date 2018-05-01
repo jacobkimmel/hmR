@@ -11,8 +11,7 @@ Imports:
     ggplot2,
     reshape2,
     dplyr,
-    Rtsne
-Suggests:
+    Rtsne,
     monocle
 License: MIT
 Encoding: UTF-8
