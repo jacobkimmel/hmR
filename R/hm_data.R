@@ -1,4 +1,5 @@
 # heteromotility data class
+require('cluster')
 
 heteromotility <- methods::setClass(
   'heteromotility',
@@ -23,9 +24,11 @@ heteromotility <- methods::setClass(
 hmMakeObject <- function(raw.data, meta.data.list = list()){
 
   meta.data = raw.data[,1:2]
-  for (i in 1:length(meta.data.list)){
-    var.name = names(meta.data.list)[i]
-    meta.data[var.name] = as.factor(meta.data.list[[i]])
+  if (length(meta.data.list) > 0){
+    for (i in 1:length(meta.data.list)){
+      var.name = names(meta.data.list)[i]
+      meta.data[var.name] = as.factor(meta.data.list[[i]])
+    }
   }
   hm = heteromotility(raw.data = raw.data,
                       unscaled.data = raw.data[,3:ncol(raw.data)],
@@ -143,6 +146,33 @@ hmHClust <- function(hm, k=2, linkage='ward.D2', dist_method='euclidean', scalar
   hm@meta.data$clust = as.factor(clust)
 
   return(hm)
+}
+
+#' Calculates silhouette values for clusters
+#' 
+#' @param hm : `heteromotility` data object.
+#' @param k_range : numeric, length 2. range of `k` parameter values to try.
+#' @param linkage : character. method for hierarchical clustering, compatible with `hclust()`.
+#' @param dist_method : character. method for distance matrix calculation, compatible with `dist()`.
+#' @param scalar : character. scalar data space to use. ['data', 'unscaled.data', 'pcs'].
+#' 
+#' @return silhouettes. numeric of silhouette values for each value of `k` in `k_range`.
+#' 
+hmCalcSilhouettes <- function(hm, k_range=c(2,6), linkage='ward.D2', dist_method='euclidean', scalar='data'){
+  
+  silhouettes = numeric(k_range[2]-k_range[1]+1)
+  dm = dist(attr(hm, scalar), method=dist_method)
+  
+  fit = hclust(dm, method=linkage)
+  i = 1
+  for (k in k_range[1]:k_range[2]){
+    clust = cutree(fit, k=k)
+    s = silhouette(clust, dm)
+    silhouettes[i] = summary(s)$avg.width
+    i = i + 1
+  }
+  names(silhouettes) = k_range[1]:k_range[2]
+  return(silhouettes)
 }
 
 #' Performs tSNE on `pcs` in `hm`
