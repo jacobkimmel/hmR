@@ -15,6 +15,8 @@ pl_theme <- theme(axis.line.x = element_line(size=0.75),
                   panel.grid.minor=element_blank(),
                   plot.background=element_blank())
 
+
+
 #' Plots PCA
 #'
 #' @param hm : `heteromtility` data object.
@@ -177,6 +179,38 @@ hmPlotFeatureMeans <- function(hm, class='clust', limited=F, sig_bars=F, width=8
   }
 
   return(p_mean)
+}
+
+#' Plots a histogram of a single feature
+#' 
+#' @param hm `heteromotility` data object.
+#' @param feature character. feature name in `scalar` data.frame for plotting.
+#' @param scalar character. scalar data space to use. ['data', 'unscaled.data', 'pcs'].
+#' @param color character. column in `@meta.data` to color subsamples.
+#' @param n_bins integer. number of histogram bins.
+#' @param height float. height of the plot in inches.
+#' @param width float. width of the plot in inches.
+#' @param save character. path to output filename.
+#' 
+#' @return ggplot2 plot object
+#' 
+hmPlotFeatureHistogram <- function(hm, feature='total_distance', scalar='data', color=NULL, n_bins=50, height=4, width=5, save=NULL){
+  
+  data = attr(hm, scalar)
+  p = ggplot(data=data, aes_string(x=feature))
+  if (!is.null(color)){
+    p = p + geom_histogram(aes(fill=hm@meta.data[,color]), bins=n_bins)
+  } else{
+    p = p + geom_histogram(bins=n_bins)
+  }
+  
+  p = p + pl_theme + scale_y_continuous(expand=c(0,0)) + labs(y='Count', title=paste(feature, 'Histogram', sep = ' '))
+  
+  if (!is.null(save)){
+    ggsave(p, filename=save, width=width, height=height, units='in')
+  }
+  
+  return(p)
 }
 
 #' Plots a heatmap of Heteromotility feature values

@@ -38,6 +38,39 @@ hmMakeObject <- function(raw.data, meta.data.list = list()){
   return(hm)
 }
 
+#' Collate summary statistics
+#' 
+#' @param hm : `heteromotility` data object.
+#' @param scalar : character. data attribute to use for summary statistics. 
+#'                 ('data', 'unscaled.data', 'pcs', 'tsne')
+#'
+#' @return summary data.frame of summary statistics
+#' 
+hmSummaryStatistics <- function(hm, scalar='unscaled.data'){
+  data = attr(hm, scalar)
+  
+  count.na <- function(x){sum(is.na(x))}
+  central.moment <- function(x, m){mean( (x-mean(x))**m )}
+  std.central.moment <- function(x, m){central.moment(x,m)/sd(x)**m}
+  
+  means = apply(data, 2, mean)
+  sds = apply(data, 2, sd)
+  nas = apply(data, 2, count.na)
+  zeros = apply(data, 2, function(x){sum(x==0)})
+  skew = apply(data, 2, function(x){std.central.moment(x, 3)})
+  kurtosis = apply(data, 2, function(x){std.central.moment(x, 4)})
+  
+  summary = data.frame(Mean=means, 
+                       SD=sds,
+                       CV=sds/means,
+                       Skew = skew,
+                       Kurt = kurtosis,
+                       NACount=nas, 
+                       Zeros=zeros, 
+                       Feature=colnames(data))
+  return(summary)
+}
+
 #' Scales and centers `raw.data` in a heteromotility object `hm`
 #'
 #' Uses `scale()` to set `mean = 0` and `std = 1` for each feature in `@unscaled.data`
