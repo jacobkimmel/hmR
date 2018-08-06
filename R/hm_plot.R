@@ -1,6 +1,8 @@
 # plot from heteromotilty object
 library(ggplot2)
 library(reshape2)
+library(pheatmap)
+library(RColorBrewer)
 as_quosure <- function(strs) rlang::parse_quosures(paste(strs, collapse=";"))
 
 sigbra <- function(x.lo, x.hi, y.lo1, y.lo2, y.hi, label = "*", lab.space = .5,
@@ -173,7 +175,12 @@ hmPlotPCATransitions <- function(hm, color, eigenvectors=NULL, amp=1, save=NULL)
   pl = pl + geom_segment(data=arrows, 
                          aes(x=centroid_x, y=centroid_y,
                           xend=centroid_x + t_x, yend=centroid_y + t_y),
-                         size=2,
+                         size=2.5,
+                         arrow=arrow(length = unit(0.5,"cm")), colour='black')
+  pl = pl + geom_segment(data=arrows, 
+                         aes(x=centroid_x, y=centroid_y,
+                             xend=centroid_x + t_x, yend=centroid_y + t_y),
+                         size=1.5,
                          arrow=arrow(length = unit(0.5,"cm")))
   return(pl)
 }
@@ -184,10 +191,15 @@ hmPlotPCATransitions <- function(hm, color, eigenvectors=NULL, amp=1, save=NULL)
 #' @param pcs vector of indices for PC loadings to plot
 #' @param save character, path to filename for saving loading plots
 #' 
-#' @return ggplot2 plot
+#' @return pheatmap object
 #' 
-hmPlotLoadings <- function(hm, pcs, save=NULL){
+hmPlotLoadings <- function(hm, pcs=1:2, save=NULL){
+  norm_loadings = loadings(hm@pca)[] / t(matrix(rep(apply(loadings(hm@pca)[], 2, sum), nrow(hm@pca$loadings)), 
+                                             nrow=nrow(hm@pca$loadings)))
   
+  df = data.frame(as.matrix(norm_loadings))
+  pl = pheatmap(norm_loadings[,pcs], cluster_rows = T, cluster_cols = F, color = brewer.pal(11, 'RdBu'))
+  return(pl)
 }
 
 #' Plots TSNE
