@@ -1,6 +1,109 @@
 # plot from heteromotilty object
-require(ggplot2)
-require(reshape2)
+library(ggplot2)
+library(reshape2)
+as_quosure <- function(strs) rlang::parse_quosures(paste(strs, collapse=";"))
+
+sigbra <- function(x.lo, x.hi, y.lo1, y.lo2, y.hi, label = "*", lab.space = .5,
+                   text.size = 8, line.size = .3, x.lo.lo = NULL,
+                   x.lo.hi = NULL, x.hi.lo = NULL, x.hi.hi = NULL,
+                   small.y.len = 1, colour = "black")
+{
+  out <- list(
+    geom_segment(aes(x = x.lo, xend = x.lo, y = y.lo1, yend = y.hi), size = .3,
+                 colour = colour),
+    geom_segment(aes(x = x.lo, xend = x.hi, y = y.hi, yend = y.hi), size = .3,
+                 colour = colour),
+    geom_segment(aes(x = x.hi, xend = x.hi, y = y.hi, yend = y.lo2), size = .3,
+                 colour = colour),
+    annotate("text", x = (x.lo + x.hi) / 2, y = y.hi + 1,
+             label = label, size = text.size, colour = colour)
+  )
+  
+  out[[1]]$mapping$x <- x.lo
+  out[[1]]$mapping$xend <- x.lo
+  out[[1]]$mapping$y <- y.lo1
+  out[[1]]$mapping$yend <- y.hi
+  out[[1]]$geom_params$size <- line.size
+  
+  out[[2]]$mapping$x <- x.lo
+  out[[2]]$mapping$xend <- x.hi
+  out[[2]]$mapping$y <- y.hi
+  out[[2]]$mapping$yend <- y.hi
+  out[[2]]$geom_params$size <- line.size
+  
+  out[[3]]$mapping$x <- x.hi
+  out[[3]]$mapping$xend <- x.hi
+  out[[3]]$mapping$y <- y.hi
+  out[[3]]$mapping$yend <- y.lo2
+  out[[3]]$geom_params$size <- line.size
+  
+  out[[4]]$mapping$x <- (x.lo + x.hi) / 2
+  out[[4]]$mapping$y <- y.hi + lab.space
+  out[[4]]$geom_params$label <- label
+  out[[4]]$geom_params$size <- text.size
+  
+  if (!is.null(x.lo.lo) & !is.null(x.lo.hi))
+  {
+    i <- length(out) + 1
+    
+    out[[i]] <- geom_segment(aes(x = x.lo.lo, xend = x.lo.lo, y = y.lo1 - 1,
+                                 yend = y.lo1), size = .3, colour = colour)
+    out[[i + 1]] <- geom_segment(aes(x = x.lo.lo, xend = x.lo.hi, y = y.lo1,
+                                     yend = y.lo1), size = .3, colour = colour)
+    out[[i + 2]] <- geom_segment(aes(x = x.lo.hi, xend = x.lo.hi, y = y.lo1,
+                                     yend = y.hi - 1), size = .3, colour = colour)
+    
+    out[[i]]$mapping$x <- x.lo.lo
+    out[[i]]$mapping$xend <- x.lo.lo
+    out[[i]]$mapping$y <- y.lo1 - small.y.len
+    out[[i]]$mapping$yend <- y.lo1
+    out[[i]]$geom_params$size <- line.size
+    
+    out[[i + 1]]$mapping$x <- x.lo.lo
+    out[[i + 1]]$mapping$xend <- x.lo.hi
+    out[[i + 1]]$mapping$y <- y.lo1
+    out[[i + 1]]$mapping$yend <- y.lo1
+    out[[i + 1]]$geom_params$size <- line.size
+    
+    out[[i + 2]]$mapping$x <- x.lo.hi
+    out[[i + 2]]$mapping$xend <- x.lo.hi
+    out[[i + 2]]$mapping$y <- y.lo1
+    out[[i + 2]]$mapping$yend <- y.lo1 - small.y.len
+    out[[i + 2]]$geom_params$size <- line.size
+  }
+  
+  if (!is.null(x.hi.lo) & !is.null(x.hi.hi))
+  {
+    i <- length(out) + 1
+    
+    out[[i]] <- geom_segment(aes(x = x.hi.lo, xend = x.hi.lo, y = y.lo1 - 1,
+                                 yend = y.lo1), size = .3, colour = colour)
+    out[[i + 1]] <- geom_segment(aes(x = x.hi.lo, xend = x.hi.hi, y = y.lo1,
+                                     yend = y.lo1), size = .3, colour = colour)
+    out[[i + 2]] <- geom_segment(aes(x = x.hi.hi, xend = x.hi.hi, y = y.lo1,
+                                     yend = y.hi - 1), size = .3, colour = colour)
+    
+    out[[i]]$mapping$x <- x.hi.lo
+    out[[i]]$mapping$xend <- x.hi.lo
+    out[[i]]$mapping$y <- y.lo2 - small.y.len
+    out[[i]]$mapping$yend <- y.lo2
+    out[[i]]$geom_params$size <- line.size
+    
+    out[[i + 1]]$mapping$x <- x.hi.lo
+    out[[i + 1]]$mapping$xend <- x.hi.hi
+    out[[i + 1]]$mapping$y <- y.lo2
+    out[[i + 1]]$mapping$yend <- y.lo2
+    out[[i + 1]]$geom_params$size <- line.size
+    
+    out[[i + 2]]$mapping$x <- x.hi.hi
+    out[[i + 2]]$mapping$xend <- x.hi.hi
+    out[[i + 2]]$mapping$y <- y.lo2
+    out[[i + 2]]$mapping$yend <- y.lo2 - small.y.len
+    out[[i + 2]]$geom_params$size <- line.size
+  }
+  
+  out
+}
 
 pl_theme <- theme(axis.line.x = element_line(size=0.75),
                   axis.line.y = element_line(size=0.75),
@@ -43,6 +146,48 @@ hmPlotPCA <- function(hm, pc1=1, pc2=2, color='clust', save=NA){
   }
 
   return(pl)
+}
+
+#' Plot statewise transition vectors atop PCA project
+#' 
+#' @param hm `heteromotility` data object
+#' @param color character. column in `meta.data` to use for coloration
+#' @param amp float. coefficient to multiply vector length for visualization.
+#' @param save character. path to file for saving.
+#' @return ggplot2 object
+#' 
+hmPlotPCATransitions <- function(hm, color, eigenvectors=NULL, amp=1, save=NULL){
+  pl = hmPlotPCA(hm, color=color)
+  states = as.character(unique(hm@meta.data[color])[,1])
+  centroids = matrix(NA, nrow=length(states), ncol=2)
+  for (i in 1:length(states)){
+    centroids[i,] = apply(hm@pcs[hm@meta.data[color]==states[i],1:2], 2, mean)
+  }
+  
+  arrows = data.frame(State=states, 
+             centroid_x = centroids[,1], 
+             centroid_y = centroids[,2],
+             t_x = hm@statewise_transitions[,1]*amp,
+             t_y = hm@statewise_transitions[,2]*amp)
+  
+  pl = pl + geom_segment(data=arrows, 
+                         aes(x=centroid_x, y=centroid_y,
+                          xend=centroid_x + t_x, yend=centroid_y + t_y),
+                         size=2,
+                         arrow=arrow(length = unit(0.5,"cm")))
+  return(pl)
+}
+
+#' Plot PCA Loadings
+#' 
+#' @param hm `hetermotility` data object.
+#' @param pcs vector of indices for PC loadings to plot
+#' @param save character, path to filename for saving loading plots
+#' 
+#' @return ggplot2 plot
+#' 
+hmPlotLoadings <- function(hm, pcs, save=NULL){
+  
 }
 
 #' Plots TSNE
@@ -265,5 +410,34 @@ hmPlotPseudotime <- function(hm, class='State', show_state_number=F, rev_x_axis=
   if (!is.null(save)){
     ggsave(pl, filename=save, width=width, height=height, units='in')
   }
+  return(pl)
+}
+
+sem <- function(x){sd(x)/sqrt(length(x))}
+
+#' Plot a feature over time in time series data
+#' 
+#' @param hm heteromotility object.
+#' @param feature character. feature in joint.data.
+#' 
+#' @return ggplot2 object
+#' 
+PlotFeatureTimeseries <- function(hm, feature='avg_speed', group=NULL, save=NULL){
+  if (!is.null(group)){
+    groupj = c('Timepoint', group)
+  } else(
+    groupj = c('Timepoint')
+  )
+  
+  feat_v_time = hm@joint.data %>% group_by(!!!as_quosure(groupj))
+  S = feat_v_time %>% summarise_at(.vars = feature, .funs = c('mean', 'sem'))
+  pl = ggplot(data=S, aes_string(x='Timepoint', y='mean', color=group)) + geom_line() + 
+    geom_ribbon(aes_string(ymin='mean-sem', ymax='mean+sem', fill=group), alpha=0.3) +
+    labs(y=feature, x='Timepoint')
+  
+  if (!is.null(save)){
+    ggsave(pl, filename=save, width=6, height=4, units='in')
+  }
+  
   return(pl)
 }

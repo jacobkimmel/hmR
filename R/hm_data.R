@@ -1,5 +1,10 @@
 # heteromotility data class
 require('cluster')
+library(tibble)
+
+attr_exists <- function(object, attr){
+  return(attr %in% names(attributes(object)))
+}
 
 heteromotility <- methods::setClass(
   'heteromotility',
@@ -7,21 +12,28 @@ heteromotility <- methods::setClass(
             data = 'data.frame', # scaled scalar data in raw.data
             unscaled.data = 'data.frame', # scalar data in raw.data
             meta.data = 'data.frame', # meta data about specific rows
+            joint.data = 'data.frame', # joint raw and meta data, useful for group summarization
             feat.data = 'data.frame', # data about specific features
+            timeseries = 'logical', # boolean if data is a timeseries or not
             pcs = 'matrix', # principal components
+            pca = 'ANY', # prcomp object
             tsne = 'matrix', # tsne embedding
             dist.matrix = 'matrix', # distance matrix
-            celldataset = 'ANY') # monocle CellDataSet
+            celldataset = 'ANY', # monocle CellDataSet
+            state_positions = 'array', # N, T, PCs array of cell positions in PCA space over time
+            transitions = 'array', # N, T-1, PCs array of state transition vectors in PCA space over time
+            statewise_transitions = 'matrix') # States, PCs array of characteristic state transition vectors
 )
 
 #' Build a `heteromotility` data object from a data.frame
 #'
 #' @param raw.data : data.frame of raw numeric data with 2 id columns
 #' @param meta.data.list : list of character vectors or factors to include in meta.data
+#' @param timeseries logical. indicates whether a time series is encoded in `raw.data$cell_id`
 #'
 #' @return hm : heteromotility data object.
 #'
-hmMakeObject <- function(raw.data, meta.data.list = list()){
+hmMakeObject <- function(raw.data, meta.data.list = list(), timeseries = F){
 
   meta.data = raw.data[,1:2]
   if (length(meta.data.list) > 0){
@@ -30,11 +42,27 @@ hmMakeObject <- function(raw.data, meta.data.list = list()){
       meta.data[var.name] = as.factor(meta.data.list[[i]])
     }
   }
+  if (timeseries){
+    idents <- data.frame(do.call('rbind', strsplit(as.character(raw.data$cell_id),'-',fixed=TRUE)))
+    idents$X1 = as.numeric(as.character(idents$X1))
+    idents$X2 = as.numeric(as.character(idents$X2))
+    raw.data$cell_id <- idents$X1
+    raw.data <- add_column(raw.data, timepoint = as.numeric(idents$X2), .after=2)
+    meta.data['Timepoint'] = as.numeric(idents$X2)
+    feat_start = 4
+  } else{
+    feat_start = 3
+  }
+  
+  joint.data = cbind(raw.data, meta.data[,3:ncol(meta.data)])
+  
   hm = heteromotility(raw.data = raw.data,
-                      unscaled.data = raw.data[,3:ncol(raw.data)],
+                      unscaled.data = raw.data[,feat_start:ncol(raw.data)],
                       meta.data = meta.data,
+                      joint.data = joint.data,
                       dist.matrix = matrix(),
-                      feat.data = data.frame(row.names = colnames(raw.data[,3:ncol(raw.data)])))
+                      feat.data = data.frame(row.names = colnames(raw.data[,feat_start:ncol(raw.data)])),
+                      timeseries=timeseries)
   return(hm)
 }
 
@@ -82,6 +110,16 @@ hmSummaryStatistics <- function(hm, scalar='unscaled.data'){
 #'
 hmScaleData <- function(hm){
   scaled = data.frame(scale(hm@unscaled.data))
+  
+  # check for nan's
+  if (sum(is.na(scaled)) > 0){
+    print('NAs encountered in scaling')
+    idx = which(is.na(scaled), arr.ind = T)
+    print('NAs in : ')
+    print(colnames(scaled)[unique(idx[,2])])
+    print('Coercing entire feature to 0s...')
+    scaled[,unique(idx[,2])] = 0
+  }
   hm@data = scaled
   return(hm)
 }
@@ -128,18 +166,18 @@ hmSubsetData <- function(hm, cell_index=F, cat=F, id=F){
   }
 
   new = hm
-  new@data = new@data[idx,]
-  new@unscaled.data = new@unscaled.data[idx,]
+  if (attr_exists(hm, 'data')){ new@data = new@data[idx,] }
+  if (attr_exists(hm, 'unscaled.data')){ new@unscaled.data = new@unscaled.data[idx,] }
   new@raw.data = new@raw.data[idx,]
   new@meta.data = new@meta.data[idx,]
 
-  if (nrow(hm@dist.matrix) == nrow(hm@data)){
+  if (nrow(hm@dist.matrix) == nrow(hm@raw.data)){
     new@dist.matrix = new@dist.matrix[idx,]
   }
-  if (nrow(hm@pcs) == nrow(hm@data)){
+  if (nrow(hm@pcs) == nrow(hm@raw.data)){
     new@pcs = new@pcs[idx,]
   }
-  if (nrow(hm@tsne) == nrow(hm@data)){
+  if (nrow(hm@tsne) == nrow(hm@raw.data)){
     new@tsne = new@tsne[idx,]
   }
 
@@ -155,9 +193,11 @@ hmSubsetData <- function(hm, cell_index=F, cat=F, id=F){
 #'   assigns `@pcs`
 #'
 hmPCA <- function(hm, max_pcs=30){
-  pca = prcomp(hm@data)
-  hm@pcs = pca$x[,1:max_pcs]
-
+  pca = princomp(hm@data)
+  scores = pca$scores[,1:max_pcs]
+  colnames(scores) = paste('PC', seq(1,ncol(scores)), sep='')
+  hm@pcs = scores
+  hm@pca = pca
   return(hm)
 }
 
@@ -217,6 +257,11 @@ hmCalcSilhouettes <- function(hm, k_range=c(2,6), linkage='ward.D2', dist_method
 #'   assigns `@tsne`
 #'
 hmTSNE <- function(hm, perplexity=50){
+  if (nrow(hm@pcs) < nrow(hm@raw.data)){
+    print('PCs must be computed first!')
+    stop()
+  }
+  
   require(Rtsne)
   tsne = Rtsne(hm@pcs, perplexity = perplexity)
   hm@tsne = tsne$Y
@@ -251,10 +296,11 @@ ttest_feature <- function(df, df.class, feature_name, class1 = 'Aged', class2 = 
 #' @param hm : `heteromtility` data object.
 #' @param cat : character. specifies column name in `hm@meta.data` to use for group definition.
 #' @param plot_path : character, optional. path to a directory to save individual t-test summary reports.
+#' @param method : multiple hypothesis correction method, compatible with `p.adjust`.
 #'
 #' @return hm : `heteromtility` data object.
 #'
-hmTTestFeatures <- function(hm, cat='age', plot_path=F){
+hmTTestFeatures <- function(hm, cat='age', plot_path=F, method='holm'){
 
   classes = levels(hm@meta.data[,cat])
 
@@ -265,7 +311,7 @@ hmTTestFeatures <- function(hm, cat='age', plot_path=F){
     ttest_results[i,] <- c(feature_name, p, 0)
   }
   colnames(ttest_results) <- c('Feature_Name', 'p_value', 'adj_p_value')
-  ttest_results$adj_p_value <- p.adjust(ttest_results$p_value, method = 'holm')
+  ttest_results$adj_p_value <- p.adjust(ttest_results$p_value, method = method)
   #ttest_results <- ttest_results[order(ttest_results$adj_p_value),] # order by pvalue, ascending
 
   hm@feat.data[,paste(cat, '_', 'p_value', sep='')] = ttest_results$p_value
@@ -359,7 +405,72 @@ hmPseudotime <- function(hm, scalar='data', cat=c('clust')){
   return(hm)
 }
 
+#' Calculate the state positions and transition vectors for each cell
+#' 
+#' @param hm `heteromotility` data object. must be a timeseries.
+#' @param eigenvectors matrix [N, N] of eigenvectors to change basis of the data in `hm`
+#'   useful for mapping the state space of variable measurements into the state space defined for 
+#'   the whole timelapse experiment.
+#' @param n_pcs integer. number of PCs to use to define transition vectors.
+#' 
+#' @return heteromotility data object with the `state_positions` and `transitions` attributes filled.
+#' 
+hmCalcTransitions <- function(hm, eigenvectors=NULL, n_pcs=2){
+  if (!hm@timeseries){
+    stop('Transitions can only be calculated if the object has timeseries data. hm@timeseries is FALSE here.')
+  }
+  
+  if (!is.null(eigenvectors)){
+    scores = as.matrix(hm@data) %*% as.matrix(eigenvectors)
+  } else{
+    scores = hm@pcs
+  }
+  minT = min(hm@meta.data$Timepoint)
+  maxT = max(hm@meta.data$Timepoint)
+  
+  n_cells = nrow(hm@data) / (maxT + 1 - minT)
+  # define the state position matrix [N, T, Dims]
+  state_positions = array(NA, dim=c(n_cells, maxT+1-minT, n_pcs))
+  # fill the array
+  for (t in minT:maxT){
+    tpoint = scores[hm@meta.data$Timepoint==t,]
+    state_positions[,t+1,] = tpoint[,1:n_pcs]
+  }
+  # get a transition array
+  transitions = state_positions[,2:(maxT+1),] - state_positions[,1:maxT,]
+  
+  hm@state_positions = state_positions
+  hm@transitions = transitions
+  return(hm)
+}
 
+#' Calculate characteristic state transitions for a predefined categorical label
+#' 
+#' @param hm `heteromotility` data object with `state_positions` and `transitions` attributes.
+#' @param cat character. categorical variable for transition vector calculation, column in `meta.data`.
+#' @param func callable. summary function to use, i.e. mean, sum, etc.
+#' @param bootstrap integer. number of bootstrap runs to perform to provide error estimates.
+#' 
+#' @return heteromotility object with [N_States, Dims] matrix of characteristic vectors.
+#' 
+hmStatewiseTransitions <- function(hm, cat='clust', func=mean, bootstrap=NULL){
+  states = as.character(unique(hm@meta.data[cat])[,1])
+  
+  statewise_transitions = matrix(NA, nrow=length(states), ncol=dim(hm@transitions)[3])
+  
+  meta.data = hm@meta.data
+  transitions = hm@transitions
 
-
+  meta.data.t0 = meta.data[meta.data$Timepoint=='0',]
+  
+  for (i in 1:length(states)){
+    s = states[i]
+    trans = transitions[meta.data.t0[cat]==s,,]
+    statewise_transitions[i,] = apply(trans, 3, func) # apply func to each cell across all timepoints
+  }
+  colnames(statewise_transitions) = paste('PC', 1:ncol(statewise_transitions), sep='')
+  rownames(statewise_transitions) = states
+  hm@statewise_transitions = statewise_transitions
+  return(hm)
+}
 
