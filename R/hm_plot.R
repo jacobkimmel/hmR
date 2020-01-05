@@ -217,7 +217,7 @@ hmPlotTSNE <- function(hm, color='clust', save=NA){
   pl = ggplot(df, aes_string(x='X1',
                              y='X2',
                              color=color)) +
-    geom_point(size=2) +
+    geom_point(size=1) +
     labs(x='tSNE-1', y='tSNE-2') +
     pl_theme
 

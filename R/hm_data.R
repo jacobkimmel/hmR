@@ -221,6 +221,29 @@ hmHClust <- function(hm, k=2, linkage='ward.D2', dist_method='euclidean', scalar
   return(hm)
 }
 
+#' Order clusters by avg_speed
+#' 
+#' @param hm : `heteromtility` data object.
+#' 
+hmOrderClusters <- function(hm){
+  tmp = hm@data
+  tmp$clust = hm@meta.data$clust
+  
+  mean_speeds = tmp %>% group_by(clust) %>% summarise(mean(avg_speed))
+  sorted_by_speed = mean_speeds[order(mean_speeds$`mean(avg_speed)`),]
+  
+  new_clust = numeric(nrow(hm@meta.data))
+  nc = 1
+  for (i in sorted_by_speed$clust){
+    bidx = hm@meta.data$clust == i
+    new_clust[bidx] = nc
+    nc = nc + 1
+  }
+  
+  hm@meta.data$clust = as.factor(new_clust)
+  return(hm)
+}
+
 #' Calculates silhouette values for clusters
 #' 
 #' @param hm : `heteromotility` data object.
@@ -263,7 +286,8 @@ hmTSNE <- function(hm, perplexity=50){
   }
   
   require(Rtsne)
-  tsne = Rtsne(hm@pcs, perplexity = perplexity)
+  # use PCA intialization
+  tsne = Rtsne(hm@pcs, perplexity = perplexity, Y_init = hm@pcs[,1:2], exaggeration_factor = 20)
   hm@tsne = tsne$Y
   return(hm)
 }
@@ -402,6 +426,7 @@ hmPseudotime <- function(hm, scalar='data', cat=c('clust')){
   cds <- reduceDimension(cds, max_components = 2, norm_method = 'none', pseudo_expr = 0)
   cds <- orderCells(cds)
   hm@celldataset = cds
+  hm@meta.data$Pseudotime = hm@celldataset@phenoData@data$Pseudotime
   return(hm)
 }
 
